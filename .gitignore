@@ -1,1 +1,3 @@
 .venv/
+testing/
+game_engine/__pycache__/
