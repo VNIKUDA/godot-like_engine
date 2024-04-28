@@ -1,27 +1,22 @@
 import pygame, os
 pygame.init()
 
+Vector2 = pygame.Vector2
 
+# Клас Node2D, працює як група
 class Node2D():
-    def __init__(self):
-        self.children = []
-        self.position = (0, 0)
+    def __init__(self, name):
+        self.name = name
+        self.parent = None
+
+        self.children = {}
+        self.position = pygame.Vector2(0, 0)
         self.rotation_degrees = 0
         self.scale = 1
 
-        self.size = (0, 0)
+        self.width, self.height = self.size = (100, 100)
 
-        self.surface = pygame.Surface((100, 100))
-
-    # def transform(self, position=None, rotation_degrees=None, scale=None):
-    #     if position:
-    #         self.position = position
-
-    #     if rotation_degrees:
-    #         self.rotation_degrees = rotation_degrees
-
-    #     if scale:
-    #         self.scale = scale
+        self.surface = pygame.Surface((self.width * 2, self.height * 2), flags=pygame.SRCALPHA) # 
 
     def upscale(self, scale):
         self.scale *= scale
@@ -29,46 +24,43 @@ class Node2D():
     def rotate(self, rotation_degrees):
         self.rotation_degrees += rotation_degrees
 
-    def move(self, position):
+    def move(self, offset: Vector2):
         x, y = self.position
-        self.position = x + position[0], y + position[1]
+        self.position += offset
 
     def draw(self, surface):
-        for child in self.children:
-            if isinstance(child, Node2D):
-                child.draw(surface)
+        children = self.children.values()
+        max_surf_size = max([(child.width * child.scale, child.height * child.scale) for child in children])
+        if self.size != max_surf_size:
+            self.width, self.height = self.size = max_surf_size
+            self.surface = pygame.transform.scale(self.surface, (self.width*2, self.height*2))
 
-            if isinstance(child, Sprite2D):
-                image = pygame.transform.rotozoom(child.image, child.rotation_degrees, child.scale)
-                surface.blit(image, child.position)
+        for child in children:
+            child.draw(self.surface)
 
-    def resize_if_needed(self, child):
-        size = self.size
-        w, h = child.size
-
-        if w > size[0]:
-            size = w, size[1]
-        if h > size[1]:
-            size = size[0], h 
-
-        if self.size != size:
-            self.size = size
-            self.surface = pygame.Surface(self.size)
+        transformed_surface = pygame.transform.rotozoom(self.surface, self.rotation_degrees, self.scale)
+        position = self.position.x - transformed_surface.get_width()/2, self.position.y - transformed_surface.get_height()/2
+        surface.blit(transformed_surface, position)
 
 
     def add_child(self, child):
-        self.children.append(child)
-        self.resize_if_needed(child)
+        self.children[child.name] = child
+        child.parent = self
         
 
     def remove_child(self, child):
         self.children.remove(child)
-        self.resize_if_needed(child)
 
 
 class Sprite2D(Node2D):
-    def __init__(self, image_path):
-        super().__init__()
-        self.image = pygame.image.load(os.path.join(image_path))
+    def __init__(self, name, image_path):
+        super().__init__(name)
+        self.image = pygame.image.load(os.path.join(image_path)).convert_alpha()
         
         self.width, self.height = self.size = self.image.get_size()
+
+    def draw(self, surface):
+        image = pygame.transform.rotozoom(self.image, self.rotation_degrees, self.scale)
+        position = self.position.x + image.get_width()/2, self.position.y + image.get_height()/2
+
+        surface.blit(image, position)

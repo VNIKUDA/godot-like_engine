@@ -4,21 +4,17 @@ pygame.init()
 
 class Scene():
     def __init__(self):
-        self.children = []
+        self.children = {}
 
     def add_child(self, child):
-        self.children.append(child)
+        self.children[child.name] = child
+        child.parent = self
 
     def remove_child(self, child):
         self.children.remove(child)
 
     def draw(self, surface):
-        for child in self.children:
-            if isinstance(child, Node2D):
-                child.draw(surface)
-
-            if isinstance(child, Sprite2D):
-                image = pygame.transform.rotozoom(child.image, child.rotation_degrees, child.scale)
-                surface.blit(image, child.position)
+        for child in self.children.values():
+            child.draw(surface)
             
             
