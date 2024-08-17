@@ -1,4 +1,5 @@
 import pygame
+import pygame.event
 pygame.init()
 
 Vector2 = pygame.Vector2
@@ -15,16 +16,16 @@ class Game():
         self.run = True
 
         self.scene = None
-        self.run_game = None
+        self.run_game = self.game_loop(int)
 
 
     def set_scene(self, scene):
         self.scene = scene
 
-    def set_game_script(self, game_script):
+    def set_main_script(self, game_script):
         self.run_game = self.game_loop(game_script)
 
-    def game_loop(self, game_script):
+    def game_loop(self, game_script=None):
         def wrapper():
             while self.run == True:
                 for event in pygame.event.get():
@@ -35,10 +36,10 @@ class Game():
 
                 self.window.screen.fill((200, 200, 200))
 
+                if game_script:
+                    game_script(delta)
+                self.scene.run_scripts(delta)                
                 self.scene.draw(self.window.screen)
-                game_script(delta)
-
-                print(self.window.clock.get_fps())
 
                 pygame.display.update()
                 
@@ -46,27 +47,60 @@ class Game():
         return wrapper
     
 class Input():
+    _actions = {}
+
     @staticmethod
     def get_direction(left, right, up, down):
-        keys = pygame.key.get_pressed()
 
         direction = Vector2(0, 0)
-        if keys[left]:
+        if Input.action_is_pressed(left):
             direction += Vector2(-1, 0)
 
-        if keys[right]:
+        if Input.action_is_pressed(right):
             direction += Vector2(1, 0)
 
-        if keys[up]:
+        if Input.action_is_pressed(up):
             direction += Vector2(0, -1)
 
-        if keys[down]:
+        if Input.action_is_pressed(down):
             direction += Vector2(0, 1)
 
         return direction
     
     @staticmethod
-    def key_is_pressed(key):
+    def key_pressed(key):
         keys = pygame.key.get_pressed()
-
         return keys[key]
+    
+    def key_just_pressed(key):
+        # pygame.event.set_allowed(pygame.KEYDOWN)
+
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == key:
+                    return True
+                    
+        return False
+    
+    @staticmethod
+    def mouse_is_pressed(btn):
+        buttons = ["left", "midlle", "right"]
+        return pygame.mouse.get_pressed()[buttons.index(btn)]
+    
+    @staticmethod
+    def create_action(name):
+        Input._actions[name] = []
+
+    @staticmethod
+    def bind_keys_to_action(action, *keys):
+        Input._actions[action] += keys
+
+    @staticmethod
+    def action_is_pressed(action):
+        keys = pygame.key.get_pressed()
+        return True in [keys[key] for key in Input._actions[action]]
+
+    
+    @staticmethod
+    def get_mouse_position():
+        return pygame.mouse.get_pos()
